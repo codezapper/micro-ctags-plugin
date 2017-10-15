@@ -38,14 +38,14 @@ function read_tags()
         if (line:find("\t")) then
             tag_name = line:sub(1, line:find("\t")-1)
             partial_line = line:sub(line:find("\t")+1, line:len())
-            if (partial_line:find("\t") ~=nil) then
+            if (partial_line:find("\t") ~= nil) then
                 file_name = partial_line:sub(1, partial_line:find("\t")-1)
 
-                -- if (string.startsWith(file_name, "./")) then
-                --     file_name = file_name:sub(3,file_name:len())
-                -- end
-                search_str = partial_line:sub(partial_line:find("\t")+1, partial_line:len())
-                tags[tag_name] = {["file_name"] = file_name, ["search_str"] = search_str:sub(3, search_str:len()-3)}
+                if (string.startsWith(file_name, "./")) then
+                    file_name = file_name:sub(3,file_name:len())
+                end
+                search_str = partial_line:sub(partial_line:find("\t")+2, partial_line:len()-5):gsub("%(", "%%("):gsub("%)", "%%)")
+                tags[tag_name] = {["file_name"] = file_name, ["search_str"] = search_str}
             end
             count = count + 1
         end
@@ -59,13 +59,13 @@ function goto_definition()
     tag_name = getText(start_block, end_block)
 
     local desired_path = tags[tag_name]["file_name"]
-    -- if (CurView().Buf.Path ~= desired_path) then
+    if (CurView().Buf.Path ~= desired_path) then
         CurView():AddTab(true)
         CurView():Open(desired_path)
-    -- end
-    messenger:AddLog("--- " .. tags[tag_name]["search_str"])
+    end
+    messenger:AddLog("---" .. tags[tag_name]["search_str"] .. "---")
     for line_index = 0, CurView().Buf.NumLines,1 do
-        if (string.match(CurView().Buf:Line(line_index), tags[tag_name]["search_str"])) then
+        if (CurView().Buf:Line(line_index):match(tags[tag_name]["search_str"])) then
             CurView().Cursor.Y = line_index
             CurView().Cursor:Relocate()
         end
