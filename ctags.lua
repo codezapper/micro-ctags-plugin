@@ -28,29 +28,63 @@ function getText(start_block, end_block)
     return CurView().Buf:Line(start_block.Y):sub(start_block.X+1,end_block.X)
 end
 
+function string:split(sep)
+   local sep, fields = sep or "/", {}
+   local pattern = string.format("([^%s]+)", sep)
+   self:gsub(pattern, function(c) fields[#fields+1] = c end)
+   return fields
+end
+
+function get_tag_filename(current_file)
+    path_parts = current_file:split()
+    max_depth = 10
+    found = false
+    base_path = ""
+    for i = 1, #path_parts-1 do
+        base_path = base_path .. "/" .. path_parts[i]
+    end
+
+    if (base_path == "") then
+        base_path = "./"
+    end
+
+    for i = 0, max_depth do
+        file_name = base_path .. "tags"
+        local file = io.open(file_name, "r")
+        if file ~= nil then
+            file:close(file_name)
+            found = true
+            break
+        end
+        base_path = base_path .. "../"
+    end
+
+    return file_name
+end
+
 function read_tags()
     count = 0
-    local file = assert(io.open("/home/gabriele/PythonCodeExercises/SearchPlayer/tags", "r"))
+    local tag_file = assert(io.open(get_tag_filename(CurView().Buf.Path), "r"))
     -- Using gmatch for some reason can block the micro editor
     -- So we do it manually
     --for name,file,search_str in line:gmatch("(.*)\t(.*)\t(.*)\t") do 
-    for line in file:lines() do
+    for line in tag_file:lines() do
         if (line:find("\t")) then
             tag_name = line:sub(1, line:find("\t")-1)
             partial_line = line:sub(line:find("\t")+1, line:len())
             if (partial_line:find("\t") ~= nil) then
-                file_name = partial_line:sub(1, partial_line:find("\t")-1)
+                filename = partial_line:sub(1, partial_line:find("\t")-1)
 
-                if (string.startsWith(file_name, "./")) then
-                    file_name = file_name:sub(3,file_name:len())
+                if (string.startsWith(filename, "./")) then
+                    filename = filename:sub(3,filename:len())
                 end
                 search_str = partial_line:sub(partial_line:find("\t")+2, partial_line:len()-5):gsub("%(", "%%("):gsub("%)", "%%)")
-                tags[tag_name] = {["file_name"] = file_name, ["search_str"] = search_str}
+                tags[tag_name] = {["filename"] = filename, ["search_str"] = search_str}
             end
             count = count + 1
         end
     end
-    file:close()
+    tag_file:close()
     return count
 end
 
@@ -58,7 +92,7 @@ function goto_definition()
     start_block, end_block = getTextLoc()
     tag_name = getText(start_block, end_block)
 
-    local desired_path = tags[tag_name]["file_name"]
+    local desired_path = tags[tag_name]["filename"]
     if (CurView().Buf.Path ~= desired_path) then
         CurView():AddTab(true)
         CurView():Open(desired_path)
