@@ -69,19 +69,17 @@ function read_tags()
     -- So we do it manually
     --for name,file,search_str in line:gmatch("(.*)\t(.*)\t(.*)\t") do 
     for line in tag_file:lines() do
-        if (line:find("\t")) then
-            tag_name = line:sub(1, line:find("\t")-1)
-            partial_line = line:sub(line:find("\t")+1, line:len())
-            if (partial_line:find("\t") ~= nil) then
-                filename = partial_line:sub(1, partial_line:find("\t")-1)
-
-                if (string.startsWith(filename, "./")) then
-                    filename = filename:sub(3,filename:len())
-                end
-                search_str = partial_line:sub(partial_line:find("\t")+2, partial_line:len()-5):gsub("%(", "%%("):gsub("%)", "%%)")
-                tags[tag_name] = {["filename"] = filename, ["search_str"] = search_str}
+        fields = line:split("\t")
+        tag_name = fields[1]
+        filename = fields[2]
+        search_str = fields[3]
+        if ((tag_name ~= nil) and (filename ~= nil) and (search_str ~= nil)) then
+            if (string.startsWith(filename, "./")) then
+                filename = filename:sub(3,filename:len())
             end
-            count = count + 1
+                search_str = search_str:sub(2, search_str:len()-3):gsub("%(", "%%("):gsub("%)", "%%)")
+                tags[tag_name] = {["filename"] = filename, ["search_str"] = search_str}
+                count = count + 1
         end
     end
     tag_file:close()
