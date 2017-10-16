@@ -2,6 +2,7 @@ MakeCommand("goto_definition", "ctags.goto_definition", 0)
 
 n_tags = 0
 tags = {}
+base_path = "./"
 
 function string.startsWith(String,Start)
    return string.sub(String,1,string.len(Start))==Start
@@ -35,17 +36,21 @@ function string:split(sep)
    return fields
 end
 
+function abspath(filename)
+	local cmd = "readlink -f " .. filename .. " 2>&1"
+	local f = assert(io.popen(cmd, "r"))
+	ret_value = assert(f:read("*a"))
+	f:close()
+	return ret_value
+end
+
 function get_tag_filename(current_file)
     path_parts = current_file:split()
     max_depth = 10
     found = false
-    base_path = ""
-    for i = 1, #path_parts-1 do
-        base_path = base_path .. "/" .. path_parts[i]
-    end
 
-    if (base_path == "") then
-        base_path = "./"
+    for i = 1, #path_parts-1 do
+        base_path = base_path .. "/" .. path_parts[i] .. "/"
     end
 
     for i = 0, max_depth do
@@ -73,13 +78,13 @@ function read_tags()
         tag_name = fields[1]
         filename = fields[2]
         search_str = fields[3]
+    messenger:AddLog("---" .. line .. "---")
         if ((tag_name ~= nil) and (filename ~= nil) and (search_str ~= nil)) then
-            if (string.startsWith(filename, "./")) then
-                filename = filename:sub(3,filename:len())
-            end
-                search_str = search_str:sub(2, search_str:len()-3):gsub("%(", "%%("):gsub("%)", "%%)")
-                tags[tag_name] = {["filename"] = filename, ["search_str"] = search_str}
-                count = count + 1
+            -- filename = base_path .. filename
+            filename = abspath(filename)
+            search_str = search_str:sub(2, search_str:len()-3):gsub("%(", "%%("):gsub("%)", "%%)")
+            tags[tag_name] = {["filename"] = filename, ["search_str"] = search_str}
+            count = count + 1
         end
     end
     tag_file:close()
