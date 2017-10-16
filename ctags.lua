@@ -41,7 +41,7 @@ function abspath(filename)
 	local f = assert(io.popen(cmd, "r"))
 	ret_value = assert(f:read("*a"))
 	f:close()
-	return ret_value
+	return ret_value:gsub("\n","")
 end
 
 function get_tag_filename(current_file)
@@ -80,8 +80,6 @@ function read_tags()
         search_str = fields[3]
     messenger:AddLog("---" .. line .. "---")
         if ((tag_name ~= nil) and (filename ~= nil) and (search_str ~= nil)) then
-            -- filename = base_path .. filename
-            filename = abspath(filename)
             search_str = search_str:sub(2, search_str:len()-3):gsub("%(", "%%("):gsub("%)", "%%)")
             tags[tag_name] = {["filename"] = filename, ["search_str"] = search_str}
             count = count + 1
@@ -95,10 +93,12 @@ function goto_definition()
     start_block, end_block = getTextLoc()
     tag_name = getText(start_block, end_block)
 
-    local desired_path = tags[tag_name]["filename"]
-    if (CurView().Buf.Path ~= desired_path) then
+    local desired_path = abspath(tags[tag_name]["filename"])
+    if (abspath(CurView().Buf.Path) ~= desired_path) then
         CurView():AddTab(true)
         CurView():Open(desired_path)
+    else
+        CurView().Cursor:ResetSelection()
     end
     messenger:AddLog("---" .. tags[tag_name]["search_str"] .. "---")
     for line_index = 0, CurView().Buf.NumLines,1 do
