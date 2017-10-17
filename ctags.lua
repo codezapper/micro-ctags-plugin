@@ -86,7 +86,10 @@ function read_tags()
 
         if ((tag_name ~= nil) and (filename ~= nil) and (search_str ~= nil)) then
             search_str = search_str:sub(2, search_str:len()-3):gsub("%(", "%%("):gsub("%)", "%%)")
-            tags[tag_filename][tag_name] = {["filename"] = filename, ["search_str"] = search_str}
+            if (tags[tag_filename][tag_name] == nil) then
+                tags[tag_filename][tag_name] = {}
+            end
+            tags[tag_filename][tag_name][#tags[tag_filename][tag_name]] = {["filename"] = filename, ["search_str"] = search_str}
             count = count + 1
         end
     end
@@ -98,16 +101,37 @@ function goto_definition()
     start_block, end_block = getTextLoc()
     tag_name = getText(start_block, end_block)
 
-    local desired_path = abspath(tags[tag_filename][tag_name]["filename"])
+    if (tags[tag_filename][tag_name] == nil) then
+        return
+    end
+
+    -- abspath is an expensive operation, doing it when reading
+    -- the tags file would make opening the view too slow
+
+    -- If there's no definition in the current view,
+    -- byt default open the first one
+    found_index = 0
+    tag_data = {}
+    for i = 0, #tags[tag_filename][tag_name] do
+        tag_data = tags[tag_filename][tag_name][i]
+        if (abspath(tag_data["filename"]) == abspath(CurView().Buf.Path)) then
+            found_index = i
+        end
+    end
+
+    tag_data = tags[tag_filename][tag_name][found_index]
+
+    local desired_path = abspath(tag_data["filename"])
     if (abspath(CurView().Buf.Path) ~= desired_path) then
         CurView():AddTab(true)
         CurView():Open(desired_path)
     else
         CurView().Cursor:ResetSelection()
     end
-    messenger:AddLog("---" .. tags[tag_filename][tag_name]["search_str"] .. "---")
+
+    CurView().Cursor:ResetSelection()
     for line_index = 0, CurView().Buf.NumLines,1 do
-        if (CurView().Buf:Line(line_index):match(tags[tag_filename][tag_name]["search_str"])) then
+        if (CurView().Buf:Line(line_index):match(tag_data["search_str"])) then
             CurView().Cursor.Y = line_index
             CurView().Cursor:Relocate()
         end
