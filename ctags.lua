@@ -2,7 +2,8 @@ MakeCommand("goto_definition", "ctags.goto_definition", 0)
 
 n_tags = 0
 tags = {}
-base_path = "./"
+tag_filename = ""
+base_path = "."
 
 function string.startsWith(String,Start)
    return string.sub(String,1,string.len(Start))==Start
@@ -64,24 +65,28 @@ function get_tag_filename(current_file)
         base_path = base_path .. "../"
     end
 
-    return file_name
+    return abspath(file_name)
 end
 
 function read_tags()
     count = 0
-    local tag_file = assert(io.open(get_tag_filename(CurView().Buf.Path), "r"))
+    local tag_file = io.open(tag_filename, "r")
+    if (tag_filename == nil) then
+        return
+    end
     -- Using gmatch for some reason can block the micro editor
     -- So we do it manually
     --for name,file,search_str in line:gmatch("(.*)\t(.*)\t(.*)\t") do 
+    tags[tag_filename] = {}
     for line in tag_file:lines() do
         fields = line:split("\t")
         tag_name = fields[1]
         filename = fields[2]
         search_str = fields[3]
-    messenger:AddLog("---" .. line .. "---")
+
         if ((tag_name ~= nil) and (filename ~= nil) and (search_str ~= nil)) then
             search_str = search_str:sub(2, search_str:len()-3):gsub("%(", "%%("):gsub("%)", "%%)")
-            tags[tag_name] = {["filename"] = filename, ["search_str"] = search_str}
+            tags[tag_filename][tag_name] = {["filename"] = filename, ["search_str"] = search_str}
             count = count + 1
         end
     end
@@ -93,16 +98,16 @@ function goto_definition()
     start_block, end_block = getTextLoc()
     tag_name = getText(start_block, end_block)
 
-    local desired_path = abspath(tags[tag_name]["filename"])
+    local desired_path = abspath(tags[tag_filename][tag_name]["filename"])
     if (abspath(CurView().Buf.Path) ~= desired_path) then
         CurView():AddTab(true)
         CurView():Open(desired_path)
     else
         CurView().Cursor:ResetSelection()
     end
-    messenger:AddLog("---" .. tags[tag_name]["search_str"] .. "---")
+    messenger:AddLog("---" .. tags[tag_filename][tag_name]["search_str"] .. "---")
     for line_index = 0, CurView().Buf.NumLines,1 do
-        if (CurView().Buf:Line(line_index):match(tags[tag_name]["search_str"])) then
+        if (CurView().Buf:Line(line_index):match(tags[tag_filename][tag_name]["search_str"])) then
             CurView().Cursor.Y = line_index
             CurView().Cursor:Relocate()
         end
@@ -110,6 +115,7 @@ function goto_definition()
 end
 
 function onViewOpen(view)
+    tag_filename = get_tag_filename(CurView().Buf.Path)
     if (n_tags == 0) then
         n_tags = read_tags()
     end
