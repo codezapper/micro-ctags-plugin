@@ -78,7 +78,7 @@ end
 function read_tags()
     count = 0
     local tag_file = io.open(tag_filename, "r")
-    if (tag_filename == nil) then
+    if (tag_file == nil) then
         return
     end
     -- Using gmatch for some reason can block the micro editor
