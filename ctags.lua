@@ -9,20 +9,27 @@ function string.startsWith(String,Start)
    return string.sub(String,1,string.len(Start))==Start
 end
 
+-- Shamelessly copied and adapted from the snippets.lua plugin
+
 function getTextLoc()
     local v = CurView()
     local a, b, c = nil, nil, v.Cursor
 
-    if c:HasSelection() then
-        if c.CurSelection[1]:GreaterThan(-c.CurSelection[2]) then
-            a, b = c.CurSelection[2], c.CurSelection[1]
-        else
-            a, b = c.CurSelection[1], c.CurSelection[2]
-        end
-    else
-        local eol = string.len(v.Buf:Line(c.Loc.Y))
-        a, b = c.Loc, Loc(eol, c.Y)
+    if (not c:HasSelection()) then
+        v.Cursor:WordLeft()
+        startX = v.Cursor.X
+        v.Cursor:WordRight()
+        endX = v.Cursor.X
+        v.Cursor:SetSelectionStart(Loc(startX, v.Cursor.Y))
+        v.Cursor:SetSelectionEnd(Loc(endX, v.Cursor.Y))
     end
+
+    if c.CurSelection[1]:GreaterThan(-c.CurSelection[2]) then
+        a, b = c.CurSelection[2], c.CurSelection[1]
+    else
+        a, b = c.CurSelection[1], c.CurSelection[2]
+    end
+
     return Loc(a.X, a.Y), Loc(b.X, b.Y)
 end
 
