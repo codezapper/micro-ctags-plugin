@@ -123,19 +123,23 @@ function goto_definition()
 
     local desired_path = abspath(tag_data["filename"])
     if (abspath(CurView().Buf.Path) ~= desired_path) then
-        CurView():AddTab(true)
+        CurView():AddTab(false)
         CurView():Open(desired_path)
     else
         CurView().Cursor:ResetSelection()
     end
 
     CurView().Cursor:ResetSelection()
-    for line_index = 0, CurView().Buf.NumLines,1 do
+    CurView().Cursor:Relocate()
+
+    for line_index = 0, CurView().Buf.NumLines do
         if (CurView().Buf:Line(line_index):match(tag_data["search_str"])) then
             CurView().Cursor.Y = line_index
-            CurView().Cursor:Relocate()
+            break
         end
     end
+
+    CurView():Relocate()
 end
 
 function onViewOpen(view)
@@ -144,3 +148,5 @@ function onViewOpen(view)
         n_tags = read_tags()
     end
 end
+
+BindKey("F12", "ctags.goto_definition")
