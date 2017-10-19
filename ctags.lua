@@ -1,6 +1,6 @@
 MakeCommand("goto_definition", "ctags.goto_definition", 0)
 
-n_tags = 0
+n_tags = {}
 tags = {}
 tag_filename = ""
 base_path = "."
@@ -151,8 +151,8 @@ end
 
 function onViewOpen(view)
     tag_filename = get_tag_filename(CurView().Buf.Path)
-    if (n_tags == 0) then
-        n_tags = read_tags()
+    if (n_tags[tag_filename] == nil) then
+        n_tags[tag_filename] = read_tags()
     end
 end
 
